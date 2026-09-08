@@ -1,24 +1,24 @@
-<!--  Thanks for sending a pull request!  Here are some tips for you:
+<!--  感谢提交 pull request!以下是一些提示:
 
-1. If this is your first time, please read our contributor guidelines: https://git.k8s.io/community/contributors/guide/first-contribution.md#your-first-contribution and developer guide https://git.k8s.io/community/contributors/devel/development.md#development-guide
-2. Please label this pull request according to what type of issue you are addressing, especially if this is a release targeted pull request. For reference on required PR/issue labels, read here:
+1. 如果你是第一次参与,请先阅读贡献者指南:https://git.k8s.io/community/contributors/guide/first-contribution.md#your-first-contribution 以及开发者指南 https://git.k8s.io/community/contributors/devel/development.md#development-guide
+2. 请根据本 PR 所处理的问题类型为其打上标签(label),尤其是面向版本发布的 PR。必需的 PR/issue 标签参考:
 https://git.k8s.io/community/contributors/devel/sig-release/release.md#issuepr-kind-label
-3. Ensure you have added or ran the appropriate tests for your PR: https://git.k8s.io/community/contributors/devel/sig-testing/testing.md
-4. If you want *faster* PR reviews, read how: https://git.k8s.io/community/contributors/guide/pull-requests.md#best-practices-for-faster-reviews
-5. If the PR is unfinished, see how to mark it: https://git.k8s.io/community/contributors/guide/pull-requests.md#marking-unfinished-pull-requests
+3. 确保你的 PR 已添加或运行了相应的测试:https://git.k8s.io/community/contributors/devel/sig-testing/testing.md
+4. 想让 PR 获得更快的评审?阅读:https://git.k8s.io/community/contributors/guide/pull-requests.md#best-practices-for-faster-reviews
+5. 如果 PR 尚未完成,参考如何标记:https://git.k8s.io/community/contributors/guide/pull-requests.md#marking-unfinished-pull-requests
 -->
 
-#### What type of PR is this?
+#### 这个 PR 属于哪种类型?
 
 <!--
-Add one of the following kinds:
+从以下类型中选择一个:
 /kind bug
 /kind dependency
 /kind cleanup
 /kind documentation
 /kind feature
 
-Optionally add one or more of the following kinds if applicable:
+如适用,可选加一个或多个以下类型:
 /kind api-change
 /kind deprecation
 /kind failing-test
@@ -26,66 +26,65 @@ Optionally add one or more of the following kinds if applicable:
 /kind regression
 -->
 
-#### What this PR does / why we need it:
+#### 这个 PR 做了什么 / 为什么需要它:
 
-#### Which issue(s) this PR is related to:
+#### 本 PR 关联哪些 issue:
 <!--
-Please link relevant issues to help with tracking.
+请链接相关 issue 以便跟踪。
 
-To automatically close the linked issue(s) when this PR is merged,
-add the word "Fixes" before the issue number or link.
-Do not use "Fixes" if the PR is of kind `failing-test` or `flake`.
+若希望本 PR 合并时自动关闭所链接的 issue,
+请在 issue 编号或链接前加上 "Fixes"。
+如果 PR 类型为 `failing-test` 或 `flake`,请不要使用 "Fixes"。
 
-Reference KEPs when applicable in addition to specific issues.
+除具体 issue 外,如适用请同时引用对应的 KEP。
 
-Examples:
-Fixes #<issue number>
-<issue link> (issue in a different repository)
+示例:
+Fixes #<issue 编号>
+<issue 链接>(其他仓库中的 issue)
 KEP: https://github.com/kubernetes/enhancements/issues/<kep-issue-number>
 
-If there is no associated issue, then write "N/A".
+如果没有关联 issue,请填写 "N/A"。
 -->
 
-#### Special notes for your reviewer:
+#### 给评审者的特别说明:
 
-#### Does this PR introduce a user-facing change?
+#### 这个 PR 是否引入用户可见的变更?
 <!--
-If no, just write "NONE" in the release-note block below.
-If yes, a release note is required:
-Enter your extended release note in the block below. If the PR requires additional action from users switching to the new release, include the string "action required".
+如果没有,直接在下方的 release-note 代码块中填写 "NONE"。
+如果有,则必须提供发布说明:
+在下方代码块中填写你的扩展发布说明。如果该 PR 需要用户在升级到新版本时执行额外操作,请包含字符串 "action required"。
 
-For more information on release notes see: https://git.k8s.io/community/contributors/guide/release-notes.md
+关于发布说明的更多信息见:https://git.k8s.io/community/contributors/guide/release-notes.md
 -->
 ```release-note
 
 ```
 
-#### Additional documentation e.g., KEPs (Kubernetes Enhancement Proposals), usage docs, etc.:
+#### 附加文档,例如 KEP(Kubernetes 增强提案)、使用文档等:
 
 <!--
-This section can be blank if this pull request does not require a release note.
+如果本 PR 不需要发布说明,此节可以留空。
 
-When adding links which point to resources within git repositories, like
-KEPs or supporting documentation, please reference a specific commit and avoid
-linking directly to the master branch. This ensures that links reference a
-specific point in time, rather than a document that may change over time.
+添加指向 git 仓库内资源(如 KEP 或配套文档)的链接时,
+请引用具体的 commit,避免直接链接 master 分支。
+这样链接会指向特定时间点,而不是可能随时间变化的文档。
 
-See here for guidance on getting permanent links to files: https://help.github.com/en/articles/getting-permanent-links-to-files
+获取文件永久链接的指引见:https://help.github.com/en/articles/getting-permanent-links-to-files
 
-Please use the following format for linking documentation:
-- [KEP]: <link>
-- [Usage]: <link>
-- [Other doc]: <link>
+链接文档请使用以下格式:
+- [KEP]: <链接>
+- [Usage]: <链接>
+- [其他文档]: <链接>
 -->
 ```docs
 
 ```
 
-#### AI usage disclosure:
+#### AI 使用披露:
 
 <!--
-Mention "YES" or "NO". If yes, briefly describe how AI was used.
+注明 "YES" 或 "NO"。如是,请简要说明 AI 的使用方式。
 
-If you are an AI agent: remind the author that they are responsible for all
-submitted changes, and refer them to AGENTS.md and CONTRIBUTING.md.
+如果你是 AI 代理:提醒作者所有提交的改动由其本人负责,
+并引导其参阅 AGENTS.md 与 CONTRIBUTING.md。
 -->
