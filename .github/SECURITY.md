@@ -1,14 +1,16 @@
-# Security Policy
+> 🌐 本文档由 [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) 翻译,英文原版见原项目。
 
-## Supported Versions
+# 安全策略
 
-Information about supported Kubernetes versions can be found on the
-[Kubernetes version and version skew support policy] page on the Kubernetes website.
+## 受支持的版本
 
-## Reporting a Vulnerability
+关于受支持的 Kubernetes 版本信息,请参阅 Kubernetes 官网上的
+[Kubernetes 版本与版本偏差支持策略]页面。
 
-Instructions for reporting a vulnerability can be found on the
-[Kubernetes Security and Disclosure Information] page.
+## 报告漏洞
 
-[Kubernetes version and version skew support policy]: https://kubernetes.io/docs/setup/release/version-skew-policy/#supported-versions
-[Kubernetes Security and Disclosure Information]: https://kubernetes.io/docs/reference/issues-security/security/#report-a-vulnerability
+报告漏洞的具体说明请参阅
+[Kubernetes 安全与披露信息]页面。
+
+[Kubernetes 版本与版本偏差支持策略]: https://kubernetes.io/docs/setup/release/version-skew-policy/#supported-versions
+[Kubernetes 安全与披露信息]: https://kubernetes.io/docs/reference/issues-security/security/#report-a-vulnerability
