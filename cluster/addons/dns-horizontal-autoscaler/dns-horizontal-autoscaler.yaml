@@ -12,13 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ============================================================================
+# 🌐 本文件由 [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) 汉化注释,英文原版见原项目。
+# 用途:DNS 水平自动扩缩容(DNS horizontal autoscaler)。
+# 该清单部署 cluster-proportional-autoscaler,按集群规模(节点数/CPU 核数)
+# 自动调整 kube-dns/CoreDNS 副本数。包含四个对象:
+#   1) ServiceAccount:kube-dns-autoscaler 运行身份
+#   2) ClusterRole:监听节点、操作 scale 子资源与 configmap 的最小权限
+#   3) ClusterRoleBinding:把角色绑定到上述服务账号
+#   4) Deployment:运行 cluster-proportional-autoscaler 控制器本体
+# ============================================================================
+
 kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: kube-dns-autoscaler
   namespace: kube-system
   labels:
-    addonmanager.kubernetes.io/mode: Reconcile
+    addonmanager.kubernetes.io/mode: Reconcile  # addon-manager 以 Reconcile 模式管理:漂移时自动恢复
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -29,15 +40,16 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
-    verbs: ["list", "watch"]
+    verbs: ["list", "watch"]  # 监听节点数量变化,作为扩缩依据之一
   - apiGroups: [""]
     resources: ["replicationcontrollers/scale"]
-    verbs: ["get", "update"]
+    verbs: ["get", "update"]  # 读取并更新 RC 的 scale 子资源(调整副本数)
   - apiGroups: ["apps"]
     resources: ["deployments/scale", "replicasets/scale"]
-    verbs: ["get", "update"]
+    verbs: ["get", "update"]  # 读取并更新 Deployment/ReplicaSet 的 scale 子资源
 # Remove the configmaps rule once below issue is fixed:
 # kubernetes-incubator/cluster-proportional-autoscaler#16
+# 中文注:待上游 issue(cluster-proportional-autoscaler#16)修复后可移除 configmaps 权限
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "create"]
@@ -76,14 +88,14 @@ spec:
       labels:
         k8s-app: kube-dns-autoscaler
     spec:
-      priorityClassName: system-cluster-critical
+      priorityClassName: system-cluster-critical  # 集群关键组件优先级,资源紧张时最后被驱逐
       securityContext:
         seccompProfile:
           type: RuntimeDefault
         supplementalGroups: [ 65534 ]
         fsGroup: 65534
       nodeSelector:
-        kubernetes.io/os: linux
+        kubernetes.io/os: linux  # 只调度到 Linux 节点
       containers:
       - name: autoscaler
         image: registry.k8s.io/cpa/cluster-proportional-autoscaler:1.8.4
@@ -94,11 +106,13 @@ spec:
         command:
           - /cluster-proportional-autoscaler
           - --namespace=kube-system
-          - --configmap=kube-dns-autoscaler
+          - --configmap=kube-dns-autoscaler  # 扩缩参数存放的 ConfigMap,可在线调整
           # Should keep target in sync with cluster/addons/dns/kube-dns.yaml.base
+          # 中文注:扩缩目标必须与 cluster/addons/dns/kube-dns.yaml.base 保持同步
           - --target={{.Target}}
           # When cluster is using large nodes(with more cores), "coresPerReplica" should dominate.
           # If using small nodes, "nodesPerReplica" should dominate.
+          # 中文注:大节点(核多)集群以 coresPerReplica 为主导;小节点集群以 nodesPerReplica 为主导
           - --default-params={"linear":{"coresPerReplica":256,"nodesPerReplica":16,"preventSinglePointFailure":true,"includeUnschedulableNodes":true}}
           - --logtostderr=true
           - --v=2

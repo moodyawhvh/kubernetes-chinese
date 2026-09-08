@@ -1,3 +1,10 @@
+# ============================================================================
+# 🌐 本文件由 [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) 汉化注释,英文原版见原项目。
+# 用途:Calico 节点组件(calico/node)以 DaemonSet 形式部署到每个节点,
+# 负责在各主机上编程网络策略(NetworkPolicy)与路由。
+# 组成:init 容器 install-cni 安装 Calico CNI 插件与网络配置;
+# 主容器 calico-node(Felix)运行数据面并对接 Kubernetes 数据存储。
+# ============================================================================
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -11,19 +18,20 @@ spec:
     matchLabels:
       k8s-app: calico-node
   updateStrategy:
-    type: RollingUpdate
+    type: RollingUpdate  # 滚动升级策略
   template:
     metadata:
       labels:
         k8s-app: calico-node
     spec:
-      priorityClassName: system-node-critical
+      priorityClassName: system-node-critical  # 节点关键优先级,保障网络组件不被驱逐
       nodeSelector:
-        projectcalico.org/ds-ready: "true"
-      hostNetwork: true
+        projectcalico.org/ds-ready: "true"  # 只调度到标记为就绪运行 Calico 的节点
+      hostNetwork: true  # 使用宿主机网络栈,直接操作主机路由与 iptables
       serviceAccountName: calico
       # Minimize downtime during a rolling upgrade or deletion; tell Kubernetes to do a "force
       # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
+      # 中文注:滚动升级或删除时最小化停机时间;让 Kubernetes 执行"强制删除"
       terminationGracePeriodSeconds: 0
       initContainers:
         - name: install-cni
@@ -45,10 +53,10 @@ spec:
                       "nodename": "__KUBERNETES_NODE_NAME__",
                       "ipam": {
                         "type": "host-local",
-                        "subnet": "usePodCidr"
+                        "subnet": "usePodCidr"  # 使用节点 Pod CIDR 作为 IPAM 子网
                       },
                       "policy": {
-                        "type": "k8s"
+                        "type": "k8s"  # 网络策略直接由 Kubernetes NetworkPolicy 驱动
                       },
                       "kubernetes": {
                         "kubeconfig": "/etc/cni/net.d/calico-kubeconfig"
@@ -66,6 +74,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
             # Prevents the container from sleeping forever.
+            # 中文注:防止容器永远休眠
             - name: SLEEP
               value: "false"
           volumeMounts:
@@ -77,17 +86,19 @@ spec:
         # Runs calico/node container on each Kubernetes node.  This
         # container programs network policy and routes on each
         # host.
+        # 中文注:在每个 Kubernetes 节点上运行 calico/node 容器,
+        # 负责在各主机上编程网络策略与路由。
         - name: calico-node
           image: gcr.io/projectcalico-org/node:v3.19.1
           env:
             - name: CALICO_MANAGE_CNI
               value: "true"
             - name: CALICO_DISABLE_FILE_LOGGING
-              value: "true"
+              value: "true"  # 禁用文件日志,仅输出到 stdout
             - name: CALICO_NETWORKING_BACKEND
-              value: "none"
+              value: "none"  # 不使用 Calico 自带 BGP 组网,由其他 CNI/机制负责路由
             - name: DATASTORE_TYPE
-              value: "kubernetes"
+              value: "kubernetes"  # 直接以 Kubernetes API 作为数据存储
             - name: FELIX_DEFAULTENDPOINTTOHOSTACTION
               value: "ACCEPT"
             - name: FELIX_HEALTHENABLED
@@ -99,19 +110,19 @@ spec:
             - name: FELIX_LOGSEVERITYSCREEN
               value: "info"
             - name: FELIX_PROMETHEUSMETRICSENABLED
-              value: "true"
+              value: "true"  # 暴露 Felix Prometheus 指标
             - name: FELIX_REPORTINGINTERVALSECS
               value: "0"
             - name: FELIX_TYPHAK8SSERVICENAME
               value: "calico-typha"
             - name: FELIX_ROUTETABLERANGE
-              value: "10-250"
+              value: "10-250"  # Felix 使用的 Linux 路由表编号范围
             - name: USE_POD_CIDR
               value: "true"
             - name: IP
-              value: "autodetect"
+              value: "autodetect"  # 自动探测节点 IP
             - name: NO_DEFAULT_POOLS
-              value: "true"
+              value: "true"  # 不创建默认 IP 池(IPAM 由 kube-controller-manager 管理)
             - name: NODENAME
               valueFrom:
                 fieldRef:
@@ -119,7 +130,7 @@ spec:
             - name: WAIT_FOR_DATASTORE
               value: "true"
           securityContext:
-            privileged: true
+            privileged: true  # 需要特权模式操作主机网络与 iptables
           livenessProbe:
             httpGet:
               path: /liveness
@@ -154,18 +165,22 @@ spec:
               readOnly: false
       volumes:
         # Used to ensure proper kmods are installed.
+        # 中文注:确保加载正确的内核模块(kmods)
         - name: lib-modules
           hostPath:
             path: /lib/modules
         # Mount in the Felix config file from the host.
+        # 中文注:挂载宿主机上的 Felix 配置文件
         - name: etc-calico
           hostPath:
             path: /etc/calico
         # Used to install CNI binaries.
+        # 中文注:用于安装 CNI 二进制
         - name: cni-bin-dir
           hostPath:
             path: __CALICO_CNI_DIR__
         # Used to install CNI network config.
+        # 中文注:用于安装 CNI 网络配置
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
@@ -181,6 +196,7 @@ spec:
             type: FileOrCreate
       tolerations:
         # Make sure calico/node gets scheduled on all nodes.
+        # 中文注:确保 calico/node 能调度到所有节点(容忍全部污点)
         - effect: NoSchedule
           operator: Exists
         - effect: NoExecute
