@@ -1,97 +1,63 @@
-# `client-go` Architecture
+> 🌐 本文档由 [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) 翻译,英文原版见原项目。
 
-This document explains the internal architecture of `client-go` for contributors. It describes the
-major components, how they interact, and the key design decisions that shape the library.
+# `client-go` 架构
 
-## Client Configuration
+本文面向贡献者讲解 `client-go` 的内部架构,内容包括主要组件、组件间的交互方式,以及决定该库形态的关键设计决策。
 
-There is an architectural separation between loading client configuration and using it. The
-`rest.Config` object is the in-memory representation of this configuration. The
-`tools/clientcmd` package is the standard factory for producing it. `clientcmd` handles the
-complex logic of parsing `kubeconfig` files, merging contexts, and handling external
-authentication providers (e.g., OIDC).
+## 客户端配置
 
-## REST Client
+加载客户端配置与使用配置在架构上是分离的。`rest.Config` 对象是配置在内存中的表示,`tools/clientcmd` 包是生成它的标准工厂。`clientcmd` 负责解析 `kubeconfig` 文件、合并 context、处理外部认证提供方(如 OIDC)等复杂逻辑。
 
-The `rest.Client` is the foundational HTTP client that underpins all other clients. It separates
-the low-level concerns of HTTP transport, serialization, and error handling from higher-level,
-Kubernetes-specific object logic.
+## REST 客户端
 
-The `rest.Config` object is used to build the underlying HTTP transport, which is typically a
-chain of `http.RoundTripper` objects. Each element in the chain is responsible for a specific
-task, such as adding an `Authorization` header. This is the mechanism by which all authentication
-is injected into requests.
+`rest.Client` 是支撑所有其他客户端的基础 HTTP 客户端。它把 HTTP 传输、序列化、错误处理这些底层关注点,与上层的 Kubernetes 特有对象逻辑分离开来。
 
-The client uses a builder pattern for requests (e.g., `.Verb()`, `.Resource()`), deferring
-response processing until a method like `.Into(&pod)` is called. This separation is key to
-supporting different client models from a common base.
+`rest.Config` 对象用于构建底层 HTTP 传输层,它通常是一条 `http.RoundTripper` 对象链。链上的每个元素负责一项特定任务,例如添加 `Authorization` 头。所有认证信息都是通过这一机制注入请求的。
 
-### Endpoint Interactions
+客户端对请求采用构建器模式(如 `.Verb()`、`.Resource()`),把响应处理推迟到调用 `.Into(&pod)` 之类的方法时才进行。这种分离是在同一基础上支撑多种客户端模型的关键。
 
-*   **Content Negotiation:** The client uses HTTP `Accept` headers to negotiate the wire format
-    (JSON or Protobuf). A key performance optimization using this mechanism is the ability to
-    request metadata-only objects via the `as=PartialObjectMetadata;g=meta.k8s.io;v=v1` Accept custom parameter.
-    Also the `as=Table;g=meta.k8s.io;v=v1` Accept custom parameters may be used to request lists as tables. 
-*   **Subresources:** The client can target standard subresources like `/status` or `/scale` for
-    object mutations, and it can also handle action-oriented subresources like `/logs` or
-    `/exec`, which often involve streaming data.
-*   **List Pagination:** For `LIST` requests, the client can specify a `limit`. The server will
-    return up to that many items and, if more exist, a `continue` token. The client is
-    responsible for passing this token in a subsequent request to retrieve the next page.
-    Higher-level tools like the `Reflector`'s `ListerWatcher` handle this logic automatically.
-*   **Streaming Watches:** A `WATCH` request returns a `watch.Interface` (from
-    `k8s.io/apimachinery/pkg/watch`), which provides a channel of structured `watch.Event`
-    objects (`ADDED`, `MODIFIED`, `DELETED`, `BOOKMARK`). This decouples the watch consumer from
-    the underlying streaming protocol.
+### 端点交互
 
-### Errors, Warnings, and Rate Limiting
+*   **内容协商:** 客户端通过 HTTP `Accept` 头协商传输格式(JSON 或 Protobuf)。基于该机制的一个重要性能优化,是可以通过 `as=PartialObjectMetadata;g=meta.k8s.io;v=v1` 这一 Accept 自定义参数请求仅含元数据的对象。此外,`as=Table;g=meta.k8s.io;v=v1` 自定义参数可用于请求以表格形式返回列表。
+*   **子资源:** 客户端可以针对 `/status`、`/scale` 等标准子资源执行对象变更,也能处理 `/logs`、`/exec` 这类面向动作的子资源,后者通常涉及流式数据。
+*   **列表分页:** 对于 `LIST` 请求,客户端可以指定 `limit`。服务端最多返回该数量的条目;若还有更多,会附带一个 `continue` 令牌。客户端需要在后续请求中携带该令牌来获取下一页。`Reflector` 的 `ListerWatcher` 等更高层的工具会自动处理这一逻辑。
+*   **流式 Watch:** `WATCH` 请求返回一个 `watch.Interface`(来自 `k8s.io/apimachinery/pkg/watch`),它提供一条结构化 `watch.Event` 对象的通道(`ADDED`、`MODIFIED`、`DELETED`、`BOOKMARK`)。这将 watch 的消费方与底层流式协议解耦。
 
-*   **Structured Errors:** The client deserializes non-2xx responses into a structured
-    `errors.StatusError`, enabling programmatic error handling (e.g., `errors.IsNotFound(err)`).
-*   **Warnings:** It processes non-fatal `Warning` headers from the API server via a
-    `WarningHandler`.
-*   **Client-Side Rate Limiting:** The `QPS` and `Burst` settings in `rest.Config` are the
-    client's half of the contract with the server's API Priority and Fairness system.
-*   **Server-Side Throttling:** The client's default transport automatically handles HTTP `429`
-    responses by reading the `Retry-After` header, waiting, and retrying the request.
+### 错误、警告与限速
 
-## Typed and Dynamic Clients
+*   **结构化错误:** 客户端把非 2xx 响应反序列化为结构化的 `errors.StatusError`,从而支持程序化的错误处理(如 `errors.IsNotFound(err)`)。
+*   **警告:** 客户端通过 `WarningHandler` 处理来自 API 服务器的非致命 `Warning` 头。
+*   **客户端限速:** `rest.Config` 中的 `QPS` 与 `Burst` 设置,是客户端一侧与服务端 API Priority and Fairness 体系对应的契约。
+*   **服务端节流:** 客户端的默认传输层会自动处理 HTTP `429` 响应:读取 `Retry-After` 头、等待,然后重试请求。
 
-To handle the extensible nature of the Kubernetes API, `client-go` provides two primary client
-models.
+## 类型化客户端与动态客户端
 
-The **`kubernetes.Clientset`** provides compile-time, type-safe access to core, built-in APIs.
+为应对 Kubernetes API 的可扩展特性,`client-go` 提供两种主要的客户端模型。
 
-The **`dynamic.DynamicClient`** represents all objects as `unstructured.Unstructured`, allowing it
-to interact with any API resource, including CRDs. It relies on two discovery mechanisms:
-1.  The **`discovery.DiscoveryClient`** determines *what* resources exist. The
-    **`CachedDiscoveryClient`** is an optimization that caches this data on disk to solve.
-2.  The **OpenAPI schema** (fetched from `/openapi/v3`) describes the *structure* of those
-    resources, providing the schema awareness needed by the dynamic client.
+**`kubernetes.Clientset`** 为核心内建 API 提供编译期、类型安全的访问。
 
-## Code Generation
+**`dynamic.DynamicClient`** 将所有对象都表示为 `unstructured.Unstructured`,因此可以与任何 API 资源(包括 CRD)交互。它依赖两种发现机制:
+1.  **`discovery.DiscoveryClient`** 用于确定*存在哪些*资源。**`CachedDiscoveryClient`** 是一种优化,它把这些数据缓存到磁盘上。
+2.  **OpenAPI schema**(从 `/openapi/v3` 获取)描述这些资源的*结构*,为动态客户端提供所需的模式感知能力。
 
-A core architectural principle of `client-go` is the use of code generation to provide a
-strongly-typed, compile-time-safe interface for specific API GroupVersions. This makes
-controller code more robust and easier to maintain. The tools in `k8s.io/code-generator` produce
-several key components:
+## 代码生成
 
-*   **Typed Clientsets:** The primary interface for interacting with a specific GroupVersion.
-*   **Typed Listers:** The read-only, cached accessors used by controllers.
-*   **Typed Informers:** The machinery for populating the cache for a specific type.
-*   **Apply Configurations:** The type-safe builders for Server-Side Apply.
+`client-go` 的一条核心架构原则是使用代码生成,为特定的 API GroupVersion 提供强类型、编译期安全的接口。这让控制器代码更健壮、更易维护。`k8s.io/code-generator` 中的工具会生成几个关键组件:
 
-A contributor modifying a built-in API type **must** run the code generation scripts to update all
-of these dependent components. For the Kubernetes project, `hack/update-codegen.sh` runs code generation.
+*   **类型化 Clientset:** 与特定 GroupVersion 交互的主要接口。
+*   **类型化 Lister:** 控制器使用的只读、缓存访问器。
+*   **类型化 Informer:** 为特定类型填充缓存的机制。
+*   **Apply 配置:** 用于 Server-Side Apply 的类型安全构建器。
 
-`sample-controller` shows how code generate can be configured to build custom controllers.
+修改内建 API 类型的贡献者**必须**运行代码生成脚本来更新所有这些依赖组件。对 Kubernetes 项目而言,`hack/update-codegen.sh` 负责运行代码生成。
 
-## Controller Infrastructure
+`sample-controller` 展示了如何配置代码生成来构建自定义控制器。
 
-The `tools/cache` package provides the core infrastructure for controllers, replacing a high-load,
-request-based pattern with a low-load, event-driven, cached model.
+## 控制器基础设施
 
-The data flow is as follows:
+`tools/cache` 包为控制器提供核心基础设施,用低负载、事件驱动、基于缓存的模型取代高负载的基于请求的模式。
+
+数据流如下:
 
 ```mermaid
 graph TD
@@ -120,43 +86,24 @@ graph TD
     Controller -- Reads from cache via Lister --> Indexer
 ```
 
-A **`Reflector`** performs a `LIST` to get a consistent snapshot of a resource, identified by a
-`resourceVersion`. It then starts a `WATCH` from that `resourceVersion` to receive a continuous
-stream of subsequent changes. The `Reflector`'s relist/rewatch loop is designed to solve the
-**"too old" `resourceVersion` error** by re-listing. To make this recovery more efficient, the
-`Reflector` consumes **watch bookmarks** from the server, which provide a more recent
-`resourceVersion` to restart from.
+**`Reflector`** 先执行一次 `LIST` 获取某个资源在特定 `resourceVersion` 下的一致性快照,然后从该 `resourceVersion` 开始 `WATCH`,持续接收后续变更。`Reflector` 的 relist/rewatch 循环旨在通过重新 List 来解决 **"too old" `resourceVersion` 错误**。为了让这种恢复更高效,`Reflector` 会消费来自服务端的 **watch bookmark**,从中获得更新的 `resourceVersion` 作为重启点。
 
-The **`Lister`** is the primary, read-only, thread-safe interface for a controller's business
-logic to access the `Indexer`'s cache.
+**`Lister`** 是控制器的业务逻辑访问 `Indexer` 缓存的主要只读、线程安全接口。
 
-## Controller Patterns
+## 控制器模式
 
-The controller infrastructure is architecturally decoupled from the controller's business logic to
-ensure resiliency.
+控制器基础设施在架构上与控制器的业务逻辑解耦,以保证健壮性。
 
-The **`util/workqueue`** creates a critical boundary between event detection (the informer's job)
-and reconciliation (the controller's job). Informer event handlers only add an object's key to the
-work queue. This allows the controller to retry failed operations with exponential backoff without
-blocking the informer's watch stream.
+**`util/workqueue`** 在事件检测(informer 的职责)与调谐 reconciliation(控制器的职责)之间建立了关键边界。informer 的事件处理器只把对象的 key 加入工作队列。这使控制器可以带指数退避地重试失败操作,而不会阻塞 informer 的 watch 流。
 
-For high availability, the **`tools/leaderelection`** package provides the standard architectural
-solution to ensure single-writer semantics by having replicas compete to acquire a lock on a
-shared `Lease` object.
+在高可用方面,**`tools/leaderelection`** 包提供了标准架构方案:让多个副本竞争获取共享 `Lease` 对象上的锁,从而保证"单一写入者"语义。
 
 ## Server-Side Apply
 
-`client-go` provides a distinct architectural pattern for object mutation that aligns with the
-server's declarative model. This is a separate workflow from the traditional `get-modify-update`
-model that allows multiple controllers to safely co-manage the same object. The
-**`applyconfigurations`** package provides the generated, type-safe builder API used to
-construct the declarative patch.
+`client-go` 为对象变更提供了一种与服务端声明式模型对齐的独特架构模式。它与传统的 `get-modify-update` 模式是分开的工作流,后者允许多个控制器安全地共同管理同一对象。**`applyconfigurations`** 包提供了生成的、类型安全的构建器 API,用于构造声明式补丁。
 
-## Versioning and Compatibility
+## 版本与兼容性
 
-`client-go` has a strict versioning relationship with the main Kubernetes repository. A `client-go`
-version `v0.X.Y` corresponds to the Kubernetes version `v1.X.Y`.
+`client-go` 与 Kubernetes 主仓库之间存在严格的版本对应关系:`client-go` 的 `v0.X.Y` 版本对应 Kubernetes `v1.X.Y` 版本。
 
-The Kubernetes API has strong backward compatibility guarantees: a client built with an older
-version of `client-go` will work with a newer API server. However, the reverse is not guaranteed.
-A contributor must not break compatibility with supported versions of the Kubernetes API server.
+Kubernetes API 有很强的向后兼容保证:用旧版 `client-go` 构建的客户端可以配合新版 API 服务器工作。但反之并无保证。贡献者绝不能破坏对受支持版本 Kubernetes API 服务器的兼容性。

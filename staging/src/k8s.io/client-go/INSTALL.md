@@ -1,93 +1,95 @@
-# Installing client-go
+> 🌐 本文档由 [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) 翻译,英文原版见原项目。
 
-## Using the latest version
+# 安装 client-go
 
-If you want to use the latest version of this library, use go1.16+ and run:
+## 使用最新版本
+
+如果你想使用本库的最新版本,请使用 go1.16+ 并运行:
 
 ```sh
 go get k8s.io/client-go@latest
 ```
 
-This will record a dependency on `k8s.io/client-go` in your go module.
-You can now import and use the `k8s.io/client-go` APIs in your project.
-The next time you `go build`, `go test`, or `go run` your project,
-`k8s.io/client-go` and its dependencies will be downloaded (if needed),
-and detailed dependency version info will be added to your `go.mod` file
-(or you can also run `go mod tidy` to do this directly).
+这会在你的 go module 中记录对 `k8s.io/client-go` 的依赖。
+之后你就可以在项目中导入并使用 `k8s.io/client-go` 的 API 了。
+下次执行 `go build`、`go test` 或 `go run` 时,
+`k8s.io/client-go` 及其依赖会被(按需)下载,
+详细的依赖版本信息会写入你的 `go.mod` 文件
+(你也可以直接运行 `go mod tidy` 来完成这一步)。
 
-## Using a specific version
+## 使用指定版本
 
-If you want to use a particular version of the `k8s.io/client-go` library,
-you can indicate which version of `client-go` your project requires:
+如果你想使用 `k8s.io/client-go` 库的某个特定版本,
+可以这样声明项目所需的 `client-go` 版本:
 
-- If you are using Kubernetes versions >= `v1.17.0`, use a corresponding `v0.x.y` tag.
-  For example, `k8s.io/client-go@v0.20.4` corresponds to Kubernetes `v1.20.4`:
+- 如果你使用的 Kubernetes 版本 >= `v1.17.0`,请使用对应的 `v0.x.y` 标签。
+  例如,`k8s.io/client-go@v0.20.4` 对应 Kubernetes `v1.20.4`:
 
 ```sh
 go get k8s.io/client-go@v0.20.4
 ```
 
-- If you are using Kubernetes versions < `v1.17.0`, use a corresponding `kubernetes-1.x.y` tag.
-  For example, `k8s.io/client-go@kubernetes-1.16.3` corresponds to Kubernetes `v1.16.3`:
+- 如果你使用的 Kubernetes 版本 < `v1.17.0`,请使用对应的 `kubernetes-1.x.y` 标签。
+  例如,`k8s.io/client-go@kubernetes-1.16.3` 对应 Kubernetes `v1.16.3`:
 
 ```sh
 go get k8s.io/client-go@kubernetes-1.16.3
 ```
 
-You can now import and use the `k8s.io/client-go` APIs in your project.
-The next time you `go build`, `go test`, or `go run` your project,
-`k8s.io/client-go` and its dependencies will be downloaded (if needed),
-and detailed dependency version info will be added to your `go.mod` file
-(or you can also run `go mod tidy` to do this directly).
+之后你就可以在项目中导入并使用 `k8s.io/client-go` 的 API 了。
+下次执行 `go build`、`go test` 或 `go run` 时,
+`k8s.io/client-go` 及其依赖会被(按需)下载,
+详细的依赖版本信息会写入你的 `go.mod` 文件
+(你也可以直接运行 `go mod tidy` 来完成这一步)。
 
-## Troubleshooting
+## 故障排查
 
-### Go versions prior to 1.16
+### Go 1.16 之前的版本
 
-If you get a message like 
-`module k8s.io/client-go@latest found (v1.5.2), but does not contain package k8s.io/client-go/...`,
-you are likely using a go version prior to 1.16 and must explicitly specify the k8s.io/client-go version you want.
-For example:
+如果你收到类似
+`module k8s.io/client-go@latest found (v1.5.2), but does not contain package k8s.io/client-go/...`
+的消息,说明你很可能在使用 1.16 之前的 go 版本,必须显式指定所需的 k8s.io/client-go 版本。
+例如:
 ```sh
 go get k8s.io/client-go@v0.20.4
 ```
 
-### Conflicting requirements for older client-go versions
+### 旧版 client-go 的依赖要求冲突
 
-If you get a message like
-`module k8s.io/api@latest found, but does not contain package k8s.io/api/auditregistration/v1alpha1`,
-something in your build is likely requiring an old version of `k8s.io/client-go` like `v11.0.0+incompatible`.
+如果你收到类似
+`module k8s.io/api@latest found, but does not contain package k8s.io/api/auditregistration/v1alpha1`
+的消息,说明你的构建链路中很可能有东西在要求旧版 `k8s.io/client-go`(例如 `v11.0.0+incompatible`)。
 
-First, try to fetch a more recent version. For example:
+首先,尝试获取更新的版本。例如:
 ```sh
 go get k8s.io/client-go@v0.20.4
 ```
 
-If that doesn't resolve the problem, see what is requiring an `...+incompatible` version of client-go,
-and update to use a newer version of that library, if possible:
+如果问题仍未解决,查一下是谁在要求 `...+incompatible` 版本的 client-go,
+并尽可能把那个库升级到更新的版本:
 ```sh
 go mod graph | grep " k8s.io/client-go@"
 ```
 
-As a last resort, you can force the build to use a specific version of client-go,
-even if some of your dependencies still want `...+incompatible` versions. For example:
+万不得已时,你可以强制构建使用特定版本的 client-go,
+即使部分依赖仍然想要 `...+incompatible` 版本。例如:
 ```sh
 go mod edit -replace=k8s.io/client-go=k8s.io/client-go@v0.20.4
 go get k8s.io/client-go@v0.20.4
 ```
 
-### Go modules disabled
+### Go modules 未启用
 
-If you get a message like `cannot use path@version syntax in GOPATH mode`,
-you likely do not have go modules enabled.  This should be on by default in all
-supported versions of Go.
+如果你收到类似 `cannot use path@version syntax in GOPATH mode` 的消息,
+说明你的 go modules 很可能没有启用。在所有受支持的 Go 版本中,
+它默认应当是开启的。
 
 ```sh
 export GO111MODULE=on
 ```
 
-Ensure your project has a `go.mod` file defined at the root of your project.
-If you do not already have one, `go mod init` will create one for you:
+确保你的项目根目录下定义了 `go.mod` 文件。
+如果还没有,`go mod init` 会帮你创建一个:
 
 ```sh
 go mod init
