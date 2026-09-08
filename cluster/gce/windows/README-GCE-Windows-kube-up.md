@@ -1,20 +1,18 @@
-# Starting a Windows Kubernetes cluster on GCE using kube-up
+> 🌐 本文档由 [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) 翻译,英文原版见原项目。
 
-## IMPORTANT PLEASE NOTE
+# 使用 kube-up 在 GCE 上启动 Windows Kubernetes 集群
 
-Any time the file structure in the `windows` directory changes, `windows/BUILD`
-and `k8s.io/release/lib/releaselib.sh` must be manually updated with the
-changes. We HIGHLY recommend not changing the file structure, because consumers
-of Kubernetes releases depend on the release structure remaining stable.
+## 重要提示
 
-## Bring up the cluster
+每当 `windows` 目录下的文件结构发生变化时,必须手工同步更新 `windows/BUILD` 和 `k8s.io/release/lib/releaselib.sh`。我们强烈建议不要改动文件结构,因为 Kubernetes 发布产物的使用方依赖发布结构保持稳定。
 
-Prerequisites: a Google Cloud Platform project.
+## 启动集群
 
-### 0. Prepare your environment
+前置条件:一个 Google Cloud Platform 项目。
 
-Clone this repository under your `$GOPATH/src` directory on a Linux machine.
-Then, optionally clean/prepare your environment using these commands:
+### 0. 准备环境
+
+在 Linux 机器上把本仓库克隆到 `$GOPATH/src` 目录下。然后,可选地用以下命令清理/准备环境:
 
 ```bash
 # Remove files that interfere with get-kube / kube-up:
@@ -30,41 +28,26 @@ gcloud auth application-default login
 export GOOGLE_APPLICATION_CREDENTIAL=[path_to_the_json_file]
 ```
 
-### 1. Build Kubernetes
+### 1. 构建 Kubernetes
 
-NOTE: this step is only needed if you want to test local changes you made to the
-codebase.
+注意:只有当你想测试自己对代码库的本地改动时才需要这一步。
 
-The most straightforward approach to build those binaries is to run `make
-release`. However, that builds binaries for all supported platforms, and can be
-slow. You can speed up the process by following the instructions below to only
-build the necessary binaries.
+构建这些二进制最直接的方式是运行 `make release`。但它会为所有受支持平台构建二进制,可能很慢。你可以按照下面的说明只构建必要的二进制来加速:
 
 ```bash
 # Build binaries for both Linux and Windows:
 KUBE_BUILD_PLATFORMS="linux/amd64 windows/amd64" make quick-release
 ```
 
-### 2. Create a Kubernetes cluster
+### 2. 创建 Kubernetes 集群
 
-You can create a regular Kubernetes cluster or an end-to-end test cluster.
+你可以创建常规 Kubernetes 集群或端到端测试集群。
 
-Only end-to-end test clusters support running the Kubernetes e2e tests (as both
-[e2e cluster creation](https://github.com/kubernetes/kubernetes/blob/b632eaddbaad9dc1430d214d506b72750bbb9f69/hack/e2e-internal/e2e-up.sh#L24)
-and
-[e2e test scripts](https://github.com/kubernetes/kubernetes/blob/b632eaddbaad9dc1430d214d506b72750bbb9f69/hack/ginkgo-e2e.sh#L42)
-are setup based on `cluster/gce/config-test.sh`), also enables some debugging
-features such as SSH access on the Windows nodes.
+只有端到端测试集群支持运行 Kubernetes e2e 测试(因为 [e2e 集群创建](https://github.com/kubernetes/kubernetes/blob/b632eaddbaad9dc1430d214d506b72750bbb9f69/hack/e2e-internal/e2e-up.sh#L24)和 [e2e 测试脚本](https://github.com/kubernetes/kubernetes/blob/b632eaddbaad9dc1430d214d506b72750bbb9f69/hack/ginkgo-e2e.sh#L42)都是基于 `cluster/gce/config-test.sh` 配置的),它还启用了诸如 Windows 节点 SSH 访问等调试特性。
 
-Please make sure you set the environment variables properly following the
-instructions in the previous section.
+请确保你已按上一节的说明正确设置了环境变量。
 
-First, set the following environment variables which are required for
-controlling the number of Linux and Windows nodes in the cluster and for
-enabling IP aliases (which are required for Windows pod routing). At least one
-Linux worker node is required and two are recommended because many default
-cluster-addons (e.g., `kube-dns`) need to run on Linux nodes. The master control
-plane only runs on Linux.
+首先,设置以下环境变量,它们用于控制集群中 Linux 与 Windows 节点的数量,并启用 IP 别名(Windows Pod 路由所需)。至少需要 1 个 Linux 工作节点,推荐 2 个,因为许多默认集群插件(如 `kube-dns`)需要在 Linux 节点上运行。主控平面只在 Linux 上运行。
 
 ```bash
 export NUM_NODES=2  # number of Linux nodes
@@ -74,18 +57,18 @@ export KUBERNETES_NODE_PLATFORM=windows
 export LOGGING_STACKDRIVER_RESOURCE_TYPES=new
 ```
 
-Now bring up a cluster using one of the following two methods:
+然后用以下两种方法之一启动集群:
 
-#### 2a. Create a regular Kubernetes cluster
+#### 2a. 创建常规 Kubernetes 集群
 
-Ensure your GCP authentication is current:
+确保你的 GCP 认证仍然有效:
 
 ```bash
 gcloud auth application-default login
 gcloud auth login
 ```
 
-Invoke kube-up.sh with these environment variables:
+携带这些环境变量调用 kube-up.sh:
 
 ```bash
 # WINDOWS_NODE_OS_DISTRIBUTION: the Windows version you want your nodes to
@@ -95,31 +78,23 @@ Invoke kube-up.sh with these environment variables:
 WINDOWS_NODE_OS_DISTRIBUTION=win2019 KUBE_UP_AUTOMATIC_CLEANUP=true ./cluster/kube-up.sh
 ```
 
-If your GCP project is configured with two-factor authentication, you may need
-to tap your security key shortly after running `kube-up`.
+如果你的 GCP 项目配置了双因素认证,可能需要在运行 `kube-up` 后不久点击一下安全密钥。
 
-To teardown the cluster run:
+销毁集群请运行:
 
 ```bash
 ./cluster/kube-down.sh
 ```
 
-If you want to run more than one cluster simultaneously, you can use two
-separate GCP projects and:
+如果你想同时运行多个集群,可以使用两个不同的 GCP 项目,并:
 
-1.  Use a separate shell for each project / cluster.
-1.  Set the `CLOUDSDK_CORE_PROJECT` environment variable to the GCP project you
-    want to use in each shell. This variable will override your current gcloud
-    config.
-1.  Prefix your `kube-up.sh` and `kube-down.sh` commands with
-    `PROJECT=${CLOUDSDK_CORE_PROJECT}`
+1.  为每个项目/集群使用独立的 shell。
+2.  在每个 shell 中把 `CLOUDSDK_CORE_PROJECT` 环境变量设为要使用的 GCP 项目。该变量会覆盖当前 gcloud 配置。
+3.  在 `kube-up.sh` 和 `kube-down.sh` 命令前加上 `PROJECT=${CLOUDSDK_CORE_PROJECT}`。
 
-#### 2b. Create a Kubernetes end-to-end (E2E) test cluster
+#### 2b. 创建 Kubernetes 端到端(E2E)测试集群
 
-If you have built your own release binaries following step 1, run the following
-command to bring up a cluster for running the K8s e2e tests. See the
-[windows-gce](https://github.com/kubernetes/test-infra/blob/master/config/jobs/kubernetes/sig-windows/windows-gce.yaml)
-e2e test configuration for the latest environment variables.
+如果你已按步骤 1 构建了自己的发布二进制,运行以下命令启动用于运行 K8s e2e 测试的集群。最新环境变量请参考 [windows-gce](https://github.com/kubernetes/test-infra/blob/master/config/jobs/kubernetes/sig-windows/windows-gce.yaml) 的 e2e 测试配置。
 
 ```bash
 KUBE_GCE_ENABLE_IP_ALIASES=true KUBERNETES_NODE_PLATFORM=windows \
@@ -128,44 +103,35 @@ KUBE_GCE_ENABLE_IP_ALIASES=true KUBERNETES_NODE_PLATFORM=windows \
   ./hack/e2e-internal/e2e-up.sh
 ```
 
-If any e2e cluster exists already, this command will prompt you to tear down and
-create a new one. To teardown existing e2e cluster only, run the command:
+如果已存在 e2e 集群,该命令会提示你先销毁再新建。只销毁现有 e2e 集群请运行:
 
 ```bash
 ./hack/e2e-internal/e2e-down.sh
 ```
 
-No matter what type of cluster you chose to create, the result should be a
-Kubernetes cluster with one Linux master node, `NUM_NODES` Linux worker nodes
-and `NUM_WINDOWS_NODES` Windows worker nodes.
+无论选择创建哪种集群,结果都是一个包含 1 个 Linux 主节点、`NUM_NODES` 个 Linux 工作节点和 `NUM_WINDOWS_NODES` 个 Windows 工作节点的 Kubernetes 集群。
 
-## Validating the cluster
+## 验证集群
 
-Invoke this script to run a smoke test that verifies that the cluster has been
-brought up correctly:
+调用该脚本运行冒烟测试,验证集群是否正确启动:
 
 ```bash
 cluster/gce/windows/smoke-test.sh
 ```
 
-Sometimes the first run of the smoke test will fail because it took too long to
-pull the Windows test containers. The smoke test will usually pass on the next
-attempt.
+有时冒烟测试第一次会失败,因为拉取 Windows 测试容器耗时过长。通常重试一次即可通过。
 
-## Running e2e tests against the cluster
+## 针对集群运行 e2e 测试
 
-If you brought up an end-to-end test cluster using the steps above then you can
-use the steps below to run K8s e2e tests. These steps are based on
-[kubernetes-sigs/windows-testing](https://github.com/kubernetes-sigs/windows-testing).
+如果你用上述步骤启动了端到端测试集群,就可以按下面的步骤运行 K8s e2e 测试。这些步骤基于 [kubernetes-sigs/windows-testing](https://github.com/kubernetes-sigs/windows-testing)。
 
-*   Build the necessary test binaries. This must be done after every change to
-    test code.
+*   构建必要的测试二进制。每次修改测试代码后都必须重新构建。
 
     ```bash
     make WHAT=test/e2e/e2e.test
     ```
 
-*   Set necessary environment variables and fetch the `run-e2e.sh` script:
+*   设置必要的环境变量并获取 `run-e2e.sh` 脚本:
 
     ```bash
     export KUBECONFIG=~/.kube/config
@@ -183,28 +149,19 @@ use the steps below to run K8s e2e tests. These steps are based on
       -o ${WORKSPACE}/prepull-head.yaml
     ```
 
-    The e2e test scripts make some annoying assumptions about the path to the
-    k8s repository. If your `~/go/src/k8s.io/kubernetes` directory is actually
-    a symlink to `~/go/src/github.com/<username>/kubernetes`, create this
-    additional symlink:
+    e2e 测试脚本对 k8s 仓库路径有一些讨厌的假设。如果你的 `~/go/src/k8s.io/kubernetes` 目录实际上是指向 `~/go/src/github.com/<username>/kubernetes` 的符号链接,请再创建这个额外的符号链接:
 
     ```bash
     cd ~/go/src/github.com; ln -s . github.com
     ```
 
-    Without this additional symlink you may receive this error when invoking
-    the `run-e2e.sh` script:
+    没有这个额外符号链接,调用 `run-e2e.sh` 脚本时可能收到该错误:
 
     ```bash
     chdir ../../github.com/<username>/kubernetes/_output/bin: no such file or directory
     ```
 
-*   The canonical arguments for running all Windows e2e tests against a cluster
-    on GCE can be seen by searching for `--test-cmd-args` in the
-    [test configuration](https://github.com/kubernetes/test-infra/blob/master/config/jobs/kubernetes/sig-windows/windows-gce.yaml#L78)
-    for the `ci-kubernetes-e2e-windows-gce` continuous test job. These arguments
-    should be passed to the `run-e2e` script; escape the ginkgo arguments by
-    adding quotes around them. For example:
+*   针对 GCE 上的集群运行全部 Windows e2e 测试的标准参数,可以在 `ci-kubernetes-e2e-windows-gce` 持续集成测试任务的[测试配置](https://github.com/kubernetes/test-infra/blob/master/config/jobs/kubernetes/sig-windows/windows-gce.yaml#L78)中搜索 `--test-cmd-args` 看到。这些参数应传给 `run-e2e` 脚本;ginkgo 参数要用引号包起来转义。例如:
 
     ```bash
     ./run-e2e.sh --node-os-distro=windows --minStartupPods=8 \
@@ -213,29 +170,24 @@ use the steps below to run K8s e2e tests. These steps are based on
       --ginkgo.parallel.total=8    # TODO: does this flag actually help?
     ```
 
-    If you get auth errors, you may need to re-authenticate:
+    如果遇到认证错误,可能需要重新认证:
 
     ```bash
     gcloud auth application-default login
     gcloud auth login
     ```
 
-*   Run a single test by setting the ginkgo focus to match your test name; for
-    example, the "DNS should provide DNS for the cluster" test can be run using:
+*   运行单个测试:把 ginkgo focus 设为匹配你的测试名;例如,"DNS should provide DNS for the cluster" 测试可以这样运行:
 
     ```bash
     ./run-e2e.sh --node-os-distro=windows \
       --ginkgo.focus="provide\sDNS\sfor\sthe\scluster"
     ```
 
-    Make sure to always include `--node-os-distro=windows` for testing against
-    Windows nodes.
+    针对 Windows 节点测试时务必始终带上 `--node-os-distro=windows`。
 
-After the test run completes, log files can be found under the `${ARTIFACTS}`
-directory.
+测试运行完成后,日志文件位于 `${ARTIFACTS}` 目录下。
 
-## E2E Testing
+## E2E 测试
 
-Once you've created a pull request you can comment, `/test
-pull-kubernetes-e2e-windows-gce` to run the integration tests that cover the
-changes in this directory.
+创建 pull request 后,你可以评论 `/test pull-kubernetes-e2e-windows-gce` 来运行覆盖本目录改动的集成测试。
